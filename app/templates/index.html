@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система анализа поступления</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Система анализа поступления</h1>
+    </header>
+    
+    <main>
+        <section class="controls">
+            <div class="control-group">
+                <label for="date-selector">Выберите дату:</label>
+                <select id="date-selector">
+                    <option value="2023-08-01">1 августа</option>
+                    <option value="2023-08-02">2 августа</option>
+                    <option value="2023-08-03">3 августа</option>
+                    <option value="2023-08-04">4 августа</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <button id="load-data-btn">Загрузить данные</button>
+                <button id="calculate-passing-scores-btn">Рассчитать проходные баллы</button>
+                <button id="generate-report-btn">Сформировать отчет</button>
+            </div>
+        </section>
+        
+        <section class="dashboard">
+            <div class="stats-container">
+                <h2>Статистика по образовательным программам</h2>
+                <table id="stats-table">
+                    <thead>
+                        <tr>
+                            <th>Программа</th>
+                            <th>Код</th>
+                            <th>Места</th>
+                            <th>Подали заявления</th>
+                            <th>С согласием</th>
+                            <th>Проходной балл</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stats-body">
+                        <!-- Data will be populated by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="chart-container">
+                <h2>График динамики проходных баллов</h2>
+                <canvas id="passingScoresChart"></canvas>
+            </div>
+        </section>
+        
+        <section class="data-view">
+            <h2>Конкурсные списки</h2>
+            <div class="filters">
+                <select id="program-filter">
+                    <option value="">Все программы</option>
+                    {% for program in programs %}
+                    <option value="{{ program.code }}">{{ program.name }} ({{ program.code }})</option>
+                    {% endfor %}
+                </select>
+                
+                <select id="priority-filter">
+                    <option value="">Все приоритеты</option>
+                    <option value="1">1-й приоритет</option>
+                    <option value="2">2-й приоритет</option>
+                    <option value="3">3-й приоритет</option>
+                    <option value="4">4-й приоритет</option>
+                </select>
+                
+                <input type="checkbox" id="consent-filter">
+                <label for="consent-filter">Только с согласием</label>
+            </div>
+            
+            <table id="applicants-table">
+                <thead>
+                    <tr>
+                        <th>ID абитуриента</th>
+                        <th>Образовательная программа</th>
+                        <th>Приоритет</th>
+                        <th>С согласием</th>
+                        <th>Физика/ИКТ</th>
+                        <th>Русский язык</th>
+                        <th>Математика</th>
+                        <th>Инд. достижения</th>
+                        <th>Сумма баллов</th>
+                    </tr>
+                </thead>
+                <tbody id="applicants-body">
+                    <!-- Data will be populated by JavaScript -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+    
+    <footer>
+        <p>Система анализа поступления &copy; {{ moment().year }}</p>
+    </footer>
+    
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
