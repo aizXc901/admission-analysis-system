@@ -1,0 +1,15 @@
+{
+  "total_applicants_generated": 219,
+  "day_applicant_counts": {
+    "01.08": 159,
+    "02.08": 166,
+    "03.08": 182,
+    "04.08": 190
+  },
+  "program_capacities": {
+    "ПМ": 40,
+    "ИВТ": 50,
+    "ИТСС": 30,
+    "ИБ": 20
+  }
+}
