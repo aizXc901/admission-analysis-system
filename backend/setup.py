@@ -1,57 +1,35 @@
-# backend/setup.py
 import os
 import sys
+import subprocess
+import django
+from django.core.management import execute_from_command_line
 
-# Добавляем текущую директорию в путь
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-# Устанавливаем настройки Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admission_api.settings')
+def setup_project():
+    print("🚀 Установка и инициализация проекта 'Система анализа поступления'")
+    print("=" * 60)
 
-try:
-    import django
+    # Устанавливаем зависимости
+    print("\n📦 Установка зависимостей...")
+    subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", "requirements.txt"])
 
+    # Активируем настройки Django
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'admission_api.settings')
     django.setup()
 
-    from django.contrib.auth import get_user_model
+    print("\n🔄 Выполнение миграций базы данных...")
+    execute_from_command_line(['manage.py', 'makemigrations'])
+    execute_from_command_line(['manage.py', 'migrate'])
 
-    User = get_user_model()
+    print("\n🔑 Создание суперпользователя (необязательно)...")
+    try:
+        execute_from_command_line(['manage.py', 'createsuperuser', '--noinput'])
+    except:
+        print("⚠️  Пропуск создания суперпользователя (уже существует или ошибка)")
 
-    # Создаем суперпользователя
-    if not User.objects.filter(username='admin').exists():
-        User.objects.create_superuser(
-            username='admin',
-            email='admin@university.ru',
-            password='admin123'
-        )
-        print("✅ Суперпользователь 'admin' создан!")
-    else:
-        print("ℹ️ Суперпользователь 'admin' уже существует")
+    print("\n✅ Проект успешно инициализирован!")
+    print("🌐 Для запуска сервера выполните: python manage.py runserver")
 
-    # Создаем образовательные программы
-    from university.models import EducationalProgram
 
-    programs = [
-        {'name': 'Прикладная математика', 'code': 'ПМ', 'slug': 'pm', 'capacity': 40},
-        {'name': 'Информатика и вычислительная техника', 'code': 'ИВТ', 'slug': 'ivt', 'capacity': 50},
-        {'name': 'Инфокоммуникационные технологии и системы связи', 'code': 'ИТСС', 'slug': 'itss', 'capacity': 30},
-        {'name': 'Информационная безопасность', 'code': 'ИБ', 'slug': 'ib', 'capacity': 20},
-    ]
-
-    for prog in programs:
-        program, created = EducationalProgram.objects.get_or_create(
-            code=prog['code'],
-            defaults=prog
-        )
-        if created:
-            print(f"✅ Создана программа: {prog['name']}")
-        else:
-            print(f"ℹ️ Программа уже существует: {prog['name']}")
-
-    print("\n🎉 Настройка завершена!")
-
-except Exception as e:
-    print(f"❌ Ошибка: {e}")
-    import traceback
-
-    traceback.print_exc()
+if __name__ == "__main__":
+    setup_project()

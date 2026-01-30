@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}Главная - Система анализа поступления{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2">Система анализа поступления</h1>
+            <p class="lead">Автоматизированный расчет проходных баллов и анализ конкурсных списков</p>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card bg-primary text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Загрузка данных</h5>
+                    <p class="card-text">Загрузка конкурсных списков из Excel/CSV файлов</p>
+                    <a href="/load-data/" class="btn btn-light">Перейти</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card bg-success text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Обновление данных</h5>
+                    <p class="card-text">Обновление базы данных с учетом изменений</p>
+                    <a href="/update-data/" class="btn btn-light">Перейти</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card bg-info text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Визуализация</h5>
+                    <p class="card-text">Просмотр и фильтрация конкурсных списков</p>
+                    <a href="/visualize-data/" class="btn btn-light">Перейти</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card bg-warning text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Проходные баллы</h5>
+                    <p class="card-text">Расчет и отображение проходных баллов</p>
+                    <a href="/calculate-passing-scores/" class="btn btn-light">Перейти</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card bg-secondary text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Генерация данных</h5>
+                    <p class="card-text">Создание тестовых конкурсных списков</p>
+                    <a href="/generate-test-data/" class="btn btn-light">Перейти</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card bg-danger text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">Очистка БД</h5>
+                    <p class="card-text">Полная очистка базы данных</p>
+                    <a href="/clear-database/" class="btn btn-light">Перейти</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6 col-lg-3 mb-4">
+            <div class="card bg-dark text-white h-100">
+                <div class="card-body">
+                    <h5 class="card-title">PDF-отчет</h5>
+                    <p class="card-text">Генерация отчетов в формате PDF</p>
+                    <a href="/generate-pdf-report/" class="btn btn-light">Перейти</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Информация о программах -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Образовательные программы</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Код</th>
+                            <th>Название</th>
+                            <th>Количество мест</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for program in programs %}
+                        <tr>
+                            <td>{{ program.code }}</td>
+                            <td>{{ program.name }}</td>
+                            <td>{{ program.seats }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

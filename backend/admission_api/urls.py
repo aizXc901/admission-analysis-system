@@ -1,8 +1,6 @@
 from django.contrib import admin
-from django.urls import path, include
-from django.http import HttpResponse
-import os
-
+from django.urls import path
+from . import views
 
 def home_view(request):
     return HttpResponse(f"""
@@ -100,12 +98,14 @@ def home_view(request):
     """)
 
 
-from university import views as university_views
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', university_views.api_home, name='api_home'),
-    path('api/programs/', university_views.programs_list, name='programs_list'),
-    path('upload/', university_views.upload_page, name='upload_page'),
-    path('', home_view, name='home'),
+    path('', views.index, name='index'),
+    path('load-data/', views.load_data, name='load_data'),
+    path('update-data/', views.update_data, name='update_data'),
+    path('calculate-passing-scores/', views.calculate_passing_scores, name='calculate_passing_scores'),
+    path('generate-pdf-report/', views.generate_pdf_report, name='generate_pdf_report'),
+    path('visualize-data/', views.visualize_data, name='visualize_data'),
+    path('clear-database/', views.clear_database, name='clear_database'),
+    path('generate-test-data/', views.generate_test_data, name='generate_test_data'),
 ]
