@@ -107,5 +107,6 @@ urlpatterns = [
     path('generate-pdf-report/', views.generate_pdf_report, name='generate_pdf_report'),
     path('visualize-data/', views.visualize_data, name='visualize_data'),
     path('clear-database/', views.clear_database, name='clear_database'),
+    path('upload/', views.load_data, name='load_data'),
     path('generate-test-data/', views.generate_test_data, name='generate_test_data'),
 ]
