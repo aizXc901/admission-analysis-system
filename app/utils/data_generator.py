@@ -234,3 +234,50 @@ def initialize_educational_programs(db):
             db.session.add(program)
     
     db.session.commit()
+
+
+def load_sample_data():
+    """
+    Load sample data from CSV files for demonstration
+    """
+    import os
+    from pathlib import Path
+    
+    # Base directory for sample data
+    base_path = Path(__file__).parent.parent.parent / 'sample_data'
+    
+    # Define educational programs and dates
+    programs = ['pm', 'ivt', 'itss']  # Using only the programs mentioned in the problem statement
+    dates = ['01', '02', '03', '04']  # August 1-4
+    
+    records_loaded = 0
+    
+    # Load data for each program and date combination
+    for program in programs:
+        for date in dates:
+            csv_file = base_path / f"{program}_{date}.csv"
+            if csv_file.exists():
+                # Read the CSV file
+                df = pd.read_csv(csv_file)
+                
+                # Ensure the dataframe has the required columns
+                required_columns = [
+                    'applicant_id', 'consent_given', 'priority_op', 'physics_ikt',
+                    'russian_lang', 'math', 'individual_achievements', 'total_score', 'educational_program'
+                ]
+                
+                # Add educational_program column if it doesn't exist
+                if 'educational_program' not in df.columns:
+                    df['educational_program'] = program.upper()
+                
+                # Add date information
+                from datetime import datetime
+                target_date = datetime.strptime(f"2023-08-{date}", "%Y-%m-%d").date()
+                
+                # Add the data to the database via the controller's save function
+                from ..controllers.main_controller import save_admission_data
+                save_admission_data(df)
+                
+                records_loaded += len(df)
+    
+    return f"Loaded {records_loaded} records from sample data files"

@@ -111,14 +111,16 @@ def calculate_advanced_passing_scores(target_date):
                 'score': 'НЕДОБОР',
                 'places_available': prog.budget_places,
                 'applicants_count_with_consent': len([a for a in all_applicants if a.educational_program == prog.code and a.consent_given]),
-                'accepted_count': 0
+                'accepted_count': 0,
+                'accepted_applicants': accepted_applicants[prog.code]
             }
         elif len(accepted_applicants[prog.code]) < prog.budget_places:
             scores[prog.code] = {
                 'score': 'НЕДОБОР',
                 'places_available': prog.budget_places,
                 'applicants_count_with_consent': len([a for a in all_applicants if a.educational_program == prog.code and a.consent_given]),
-                'accepted_count': len(accepted_applicants[prog.code])
+                'accepted_count': len(accepted_applicants[prog.code]),
+                'accepted_applicants': accepted_applicants[prog.code]
             }
         else:
             # Passing score is the score of the last accepted applicant
@@ -129,7 +131,8 @@ def calculate_advanced_passing_scores(target_date):
                 'applicants_count_with_consent': len([a for a in all_applicants if a.educational_program == prog.code and a.consent_given]),
                 'accepted_count': len(accepted_applicants[prog.code]),
                 'highest_score': max((a.total_score for a in accepted_applicants[prog.code]), default=0),
-                'lowest_score': last_accepted.total_score
+                'lowest_score': last_accepted.total_score,
+                'accepted_applicants': accepted_applicants[prog.code]
             }
     
     return scores
@@ -162,17 +165,40 @@ def get_statistics_for_date(target_date):
         passing_scores = calculate_passing_scores(target_date)
         accepted_count = passing_scores[program.code]['accepted_count'] if passing_scores[program.code]['score'] != 'НЕДОБОР' else len(consent_applicants)
         
-        # Accepted by priority
+        # Calculate accepted by priority - this requires the advanced algorithm to determine who got accepted
         accepted_by_priority = {1: 0, 2: 0, 3: 0, 4: 0}
-        if passing_scores[program.code]['score'] != 'НЕДОБОР':
-            # Need to implement the logic to determine which accepted applicants had which priority
-            # For now, we'll calculate based on the advanced algorithm
-            advanced_results = calculate_advanced_passing_scores(target_date)
-            if program.code in advanced_results:
-                accepted_apps = advanced_results[program.code].get('accepted_applicants', [])
-                for app in accepted_apps:
-                    if 1 <= app.priority_op <= 4:
+        
+        # Get the list of actually accepted applicants using the advanced algorithm
+        advanced_results = calculate_advanced_passing_scores(target_date)
+        if program.code in advanced_results and 'accepted_applicants' in advanced_results[program.code]:
+            accepted_apps = advanced_results[program.code]['accepted_applicants']
+            for app in accepted_apps:
+                if 1 <= app.priority_op <= 4:
+                    accepted_by_priority[app.priority_op] += 1
+        else:
+            # Fallback: if we don't have the accepted_applicants list, just count by priority from consent applicants
+            # up to the number of accepted positions
+            consent_apps_by_priority = {}
+            for app in consent_applicants:
+                if app.priority_op not in consent_apps_by_priority:
+                    consent_apps_by_priority[app.priority_op] = []
+                consent_apps_by_priority[app.priority_op].append(app)
+            
+            # Sort by total score descending for each priority
+            for priority in consent_apps_by_priority:
+                consent_apps_by_priority[priority].sort(key=lambda x: x.total_score, reverse=True)
+            
+            # Take top applicants up to accepted count
+            taken_count = 0
+            for priority in sorted(consent_apps_by_priority.keys()):
+                for app in consent_apps_by_priority[priority]:
+                    if taken_count < accepted_count:
                         accepted_by_priority[app.priority_op] += 1
+                        taken_count += 1
+                    else:
+                        break
+                if taken_count >= accepted_count:
+                    break
         
         stats[program.code] = {
             'program_name': program.name,
