@@ -79,15 +79,125 @@ def update_data(request):
     """Обновление данных (удаление, добавление, изменение)"""
     if request.method == 'POST':
         try:
-            # Логика обновления данных
-            # 1. Удаление абитуриентов, которые отсутствуют в новых данных
-            # 2. Добавление новых абитуриентов
-            # 3. Обновление существующих записей
+            # Получаем файлы из запроса
+            uploaded_files = request.FILES.getlist('files')
 
-            # Эта логика будет зависеть от конкретного источника данных
-            # Для простоты реализуем заглушку
+            if not uploaded_files:
+                return JsonResponse({'error': 'Не загружены файлы для обновления'}, status=400)
 
-            return JsonResponse({'success': True, 'message': 'Данные успешно обновлены'})
+            all_records = []
+            total_processed = 0
+
+            # Обрабатываем каждый загруженный файл
+            for uploaded_file in uploaded_files:
+                # Определение типа файла
+                if uploaded_file.name.endswith('.xlsx'):
+                    df = pd.read_excel(uploaded_file)
+                elif uploaded_file.name.endswith('.csv'):
+                    df = pd.read_csv(uploaded_file)
+                else:
+                    return JsonResponse({'error': 'Неподдерживаемый формат файла'}, status=400)
+
+                # Добавляем записи из файла в общий список
+                for _, row in df.iterrows():
+                    all_records.append(row)
+                total_processed += len(df)
+
+            # Получаем все существующие записи в базе данных
+            existing_admissions = AdmissionData.objects.select_related('applicant', 'educational_program').all()
+            
+            # Создаем словарь существующих записей для быстрого поиска (ключ: (ID абитуриента, код программы))
+            existing_map = {}
+            for adm in existing_admissions:
+                key = (adm.applicant.id, adm.educational_program.code)
+                existing_map[key] = adm
+
+            # Создаем словарь новых записей для быстрого поиска
+            new_records_map = {}
+            for row in all_records:
+                key = (row['ID'], row['ОП'])
+                new_records_map[key] = row
+
+            # 1. Определяем абитуриентов, которых нужно удалить (есть в БД, но нет в новых данных)
+            to_delete = []
+            for key, adm in existing_map.items():
+                if key not in new_records_map:
+                    to_delete.append(adm)
+
+            # 2. Определяем абитуриентов, которых нужно добавить (есть в новых данных, но нет в БД)
+            to_add = []
+            for key, row in new_records_map.items():
+                if key not in existing_map:
+                    to_add.append(row)
+
+            # 3. Определяем абитуриентов, которых нужно обновить (есть и в БД, и в новых данных)
+            to_update = []
+            for key, row in new_records_map.items():
+                if key in existing_map:
+                    to_update.append((existing_map[key], row))
+
+            # Выполняем операции с базой данных
+            deleted_count = 0
+            added_count = 0
+            updated_count = 0
+
+            # Удаляем записи
+            for adm in to_delete:
+                adm.delete()
+                deleted_count += 1
+
+            # Добавляем и обновляем записи
+            for row in to_add:
+                # Получаем или создаем абитуриента
+                applicant, created = Applicant.objects.get_or_create(
+                    id=row['ID'],
+                    defaults={
+                        'physics_ikt': row['Балл Физика/ИКТ'],
+                        'russian_lang': row['Балл Русский язык'],
+                        'math': row['Балл Математика'],
+                        'achievements': row['Балл за индивидуальные достижения'],
+                        'total_score': row['Сумма баллов']
+                    }
+                )
+
+                # Получаем программу
+                program = EducationalProgram.objects.get(code=row['ОП'])
+
+                # Создаем новую запись в AdmissionData
+                AdmissionData.objects.create(
+                    applicant=applicant,
+                    educational_program=program,
+                    date=parse_date(row['Дата']) if 'Дата' in row else datetime.now().date(),
+                    has_consent=bool(row['Наличие согласия о зачислении в ВУЗ']),
+                    priority=int(row['Приоритет ОП'])
+                )
+                added_count += 1
+
+            # Обновляем существующие записи
+            for existing_adm, row in to_update:
+                # Обновляем информацию об абитуриенте
+                existing_adm.applicant.physics_ikt = row['Балл Физика/ИКТ']
+                existing_adm.applicant.russian_lang = row['Балл Русский язык']
+                existing_adm.applicant.math = row['Балл Математика']
+                existing_adm.applicant.achievements = row['Балл за индивидуальные достижения']
+                existing_adm.applicant.total_score = row['Сумма баллов']
+                existing_adm.applicant.save()
+
+                # Обновляем информацию в AdmissionData
+                existing_adm.date = parse_date(row['Дата']) if 'Дата' in row else datetime.now().date()
+                existing_adm.has_consent = bool(row['Наличие согласия о зачислении в ВУЗ'])
+                existing_adm.priority = int(row['Приоритет ОП'])
+                existing_adm.save()
+                updated_count += 1
+
+            return JsonResponse({
+                'success': True, 
+                'message': f'Данные успешно обновлены: добавлено {added_count}, обновлено {updated_count}, удалено {deleted_count}',
+                'records_count': total_processed,
+                'added_count': added_count,
+                'updated_count': updated_count,
+                'deleted_count': deleted_count
+            })
 
         except Exception as e:
             return JsonResponse({'error': f'Ошибка при обновлении данных: {str(e)}'}, status=400)
