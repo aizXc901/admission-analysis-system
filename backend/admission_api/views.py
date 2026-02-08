@@ -320,6 +320,7 @@ def generate_test_data(request):
     """Генерация тестовых данных"""
     if request.method == 'POST':
         try:
+            from django.views.decorators.csrf import csrf_exempt
             run_data_generation()
             return JsonResponse({'success': True, 'message': 'Тестовые данные сгенерированы'})
 

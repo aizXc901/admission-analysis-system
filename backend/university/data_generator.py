@@ -129,7 +129,7 @@ class DataGenerator:
 
         return applicants_data
 
-    def save_to_database(self, date, applicants_data):
+    def save_to_database(self, date, applicants_data, program_code):
         """Сохраняет данные в базу данных"""
         for applicant_id, data in applicants_data:
             # Получаем или создаем абитуриента
@@ -145,7 +145,6 @@ class DataGenerator:
             )
 
             # Получаем программу
-            program_code = date.split('-')[0] if '-' in date else 'ПМ'  # временно
             program = EducationalProgram.objects.get(code=program_code)
 
             # Создаем или обновляем запись в AdmissionData
@@ -170,10 +169,20 @@ class DataGenerator:
         dates = ['01.08', '02.08', '03.08', '04.08']
 
         for date in dates:
-            print(f"Генерация данных для {date}...")
-            applicants_data = self.generate_date_data(date)
-            self.save_to_database(date, applicants_data)
-            print(f"Сгенерировано {len(applicants_data)} записей для {date}")
+            for program_code in self.programs.keys():
+                print(f"Генерация данных для {date}, программа {program_code}...")
+                applicants_data = self.generate_date_data(date)
+                # Фильтруем данные только для текущей программы
+                program_applicants = []
+                for aid, data in applicants_data:
+                    if aid not in [item[0] for item in program_applicants]:
+                        # Просто добавляем абитуриента к программе, используя случайный приоритет
+                        data_copy = data.copy()
+                        data_copy['priority'] = random.randint(1, 4)
+                        program_applicants.append((aid, data_copy))
+                
+                self.save_to_database(date, program_applicants, program_code)
+                print(f"Сгенерировано {len(program_applicants)} записей для {date}, программа {program_code}")
 
 
 # Функция для запуска генерации данных
