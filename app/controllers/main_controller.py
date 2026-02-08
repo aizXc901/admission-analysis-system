@@ -21,11 +21,7 @@ def index():
     # Get all educational programs
     programs = EducationalProgram.query.all()
     
-    # Get latest admission data
-    today = date.today()
-    latest_data = AdmissionData.query.filter_by(date=today).all()
-    
-    return render_template('index.html', programs=programs, data=latest_data)
+    return render_template('index.html', programs=programs)
 
 
 @bp.route('/upload', methods=['POST'])
@@ -139,6 +135,105 @@ def get_passing_scores():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@bp.route('/api/applicants')
+def get_applicants():
+    """API endpoint to get filtered applicants data"""
+    try:
+        # Get filter parameters
+        date_str = request.args.get('date', '')
+        program = request.args.get('program', '')
+        priority = request.args.get('priority', '')
+        consent = request.args.get('consent', '')
+        
+        # Parse date
+        if date_str:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        else:
+            target_date = date.today()
+        
+        # Build query
+        query = AdmissionData.query.filter(AdmissionData.date == target_date)
+        
+        if program:
+            query = query.filter(AdmissionData.educational_program == program)
+        
+        if priority:
+            query = query.filter(AdmissionData.priority_op == int(priority))
+        
+        if consent == 'true':
+            query = query.filter(AdmissionData.consent_given == True)
+        
+        applicants = query.order_by(AdmissionData.total_score.desc()).all()
+        
+        # Convert to JSON-serializable format
+        applicants_data = []
+        for applicant in applicants:
+            applicants_data.append({
+                'id': applicant.id,
+                'applicant_id': applicant.applicant_id,
+                'educational_program': applicant.educational_program,
+                'priority_op': applicant.priority_op,
+                'consent_given': applicant.consent_given,
+                'physics_ikt': applicant.physics_ikt,
+                'russian_lang': applicant.russian_lang,
+                'math': applicant.math,
+                'individual_achievements': applicant.individual_achievements,
+                'total_score': applicant.total_score
+            })
+        
+        return jsonify({'applicants': applicants_data})
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
+@bp.route('/api/stats')
+def get_stats():
+    """API endpoint to get statistics data"""
+    try:
+        date_str = request.args.get('date', '')
+        if date_str:
+            target_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+        else:
+            target_date = date.today()
+        
+        # Get all educational programs
+        programs = EducationalProgram.query.all()
+        
+        # Calculate passing scores
+        passing_scores = calculate_passing_scores(target_date)
+        
+        # Prepare stats data
+        stats_data = []
+        for program in programs:
+            # Get all applicants for this program on the target date
+            all_applicants = AdmissionData.query.filter(
+                AdmissionData.date == target_date,
+                AdmissionData.educational_program == program.code
+            ).count()
+            
+            # Get applicants with consent for this program
+            consent_applicants = AdmissionData.query.filter(
+                AdmissionData.date == target_date,
+                AdmissionData.educational_program == program.code,
+                AdmissionData.consent_given == True
+            ).count()
+            
+            stats_data.append({
+                'code': program.code,
+                'program_name': program.name,
+                'places': program.budget_places,
+                'applications': all_applicants,
+                'with_consent': consent_applicants,
+                'passing_score': passing_scores[program.code]['score'] if program.code in passing_scores else 'Н/Д'
+            })
+        
+        return jsonify({'stats': stats_data})
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @bp.route('/generate_report', methods=['POST'])
 def generate_report():
     """Generate PDF report with admission statistics"""
@@ -188,3 +283,16 @@ def save_admission_data(df):
             existing_applicant.educational_program = row['educational_program']
     
     db.session.commit()
+
+
+@bp.route('/load_sample_data', methods=['POST'])
+def load_sample_data():
+    """Load sample data from CSV files for demonstration"""
+    try:
+        from ..utils.data_generator import load_sample_data
+        result = load_sample_data()
+        
+        return jsonify({'status': 'success', 'message': f'Sample data loaded: {result}'})
+        
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)}), 500

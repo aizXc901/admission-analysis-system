@@ -15,7 +15,12 @@ document.addEventListener('DOMContentLoaded', function() {
     loadStatsData();
     
     // Event listeners
-    loadDataBtn.addEventListener('click', loadApplicantsData);
+    dateSelector.addEventListener('change', function() {
+        loadApplicantsData();
+        loadStatsData();
+    });
+    
+    loadDataBtn.addEventListener('click', loadSampleData);
     calculatePassingScoresBtn.addEventListener('click', calculatePassingScores);
     generateReportBtn.addEventListener('click', generateReport);
     
@@ -23,6 +28,31 @@ document.addEventListener('DOMContentLoaded', function() {
     programFilter.addEventListener('change', loadApplicantsData);
     priorityFilter.addEventListener('change', loadApplicantsData);
     consentFilter.addEventListener('change', loadApplicantsData);
+    
+    // Function to load sample data
+    async function loadSampleData() {
+        try {
+            const response = await fetch('/load_sample_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            const data = await response.json();
+            
+            if (data.status === 'success') {
+                alert(data.message);
+                // Reload data to show the newly loaded sample data
+                loadApplicantsData();
+                loadStatsData();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        } catch (error) {
+            console.error('Error loading sample data:', error);
+            alert('Error loading sample data: ' + error.message);
+        }
+    }
     
     // Function to load applicants data
     async function loadApplicantsData() {
@@ -32,9 +62,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const priority = priorityFilter.value;
             const consent = consentFilter.checked;
             
-            // Simulate API call to get applicants data
-            const response = await fetch(`/api/applicants?date=${selectedDate}&program=${program}&priority=${priority}&consent=${consent}`);
+            // Build query string
+            let queryString = `?date=${selectedDate}`;
+            if (program) queryString += `&program=${program}`;
+            if (priority) queryString += `&priority=${priority}`;
+            if (consent) queryString += `&consent=true`;
+            
+            const response = await fetch(`/api/applicants${queryString}`);
             const data = await response.json();
+            
+            if (data.status === 'error') {
+                console.error('API Error:', data.message);
+                return;
+            }
             
             populateApplicantsTable(data.applicants || []);
         } catch (error) {
@@ -47,9 +87,13 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const selectedDate = dateSelector.value;
             
-            // Simulate API call to get stats data
             const response = await fetch(`/api/stats?date=${selectedDate}`);
             const data = await response.json();
+            
+            if (data.status === 'error') {
+                console.error('API Error:', data.message);
+                return;
+            }
             
             populateStatsTable(data.stats || []);
         } catch (error) {
@@ -65,6 +109,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const response = await fetch(`/passing_scores?date=${selectedDate}`);
             const data = await response.json();
             
+            if (data.status === 'error') {
+                alert('Error calculating passing scores: ' + data.message);
+                return;
+            }
+            
             alert(`Проходные баллы рассчитаны для ${selectedDate}.\nОткройте консоль для деталей.`);
             console.log('Passing scores:', data);
             
@@ -72,6 +121,7 @@ document.addEventListener('DOMContentLoaded', function() {
             loadStatsData();
         } catch (error) {
             console.error('Error calculating passing scores:', error);
+            alert('Error calculating passing scores: ' + error.message);
         }
     }
     
@@ -100,10 +150,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 a.remove();
                 window.URL.revokeObjectURL(url);
             } else {
-                console.error('Error generating report:', response.statusText);
+                const errorData = await response.json();
+                console.error('Error generating report:', errorData.message);
+                alert('Error generating report: ' + errorData.message);
             }
         } catch (error) {
             console.error('Error generating report:', error);
+            alert('Error generating report: ' + error.message);
         }
     }
     
@@ -175,11 +228,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     label: 'Инфокоммуникационные технологии и системы связи (ИТСС)',
                     data: [200, 220, 240, 260],
                     borderColor: 'rgb(75, 192, 192)',
-                    tension: 0.1
-                }, {
-                    label: 'Информационная безопасность (ИБ)',
-                    data: [220, 250, 270, 290],
-                    borderColor: 'rgb(153, 102, 255)',
                     tension: 0.1
                 }]
             },

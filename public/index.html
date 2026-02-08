@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система анализа поступления</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+        
+        .upload-section {
+            margin-bottom: 20px;
+        }
+        
+        .upload-section input[type="file"] {
+            margin-right: 10px;
+        }
+        
+        select, input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        .results {
+            margin-top: 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        
+        .status-admitted {
+            background-color: #d4edda !important;
+            color: #155724;
+        }
+        
+        .status-borderline {
+            background-color: #fff3cd !important;
+            color: #856404;
+        }
+        
+        .status-not-admitted {
+            background-color: #f8d7da !important;
+            color: #721c24;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .probability-bar {
+            width: 100px;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .probability-fill {
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.3s ease;
+        }
+        
+        .probability-text {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            line-height: 20px;
+            color: white;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Система анализа поступления</h1>
+        
+        <div class="controls">
+            <div class="upload-section">
+                <label>Загрузить данные:</label>
+                <input type="file" id="fileInput" accept=".csv">
+                <button onclick="uploadFile()">Загрузить</button>
+            </div>
+            
+            <div class="upload-section">
+                <label>Пакетная загрузка:</label>
+                <input type="file" id="batchFileInput" accept=".csv" multiple>
+                <button onclick="batchUploadFiles()">Загрузить все</button>
+            </div>
+            
+            <button onclick="loadSampleData()">Загрузить тестовые данные</button>
+            <button onclick="updateDatabase()">Обновить БД</button>
+            <button onclick="cleanupDatabase()">Очистить БД</button>
+            
+            <select id="programSelect" onchange="loadApplicants()">
+                <option value="">Выберите программу</option>
+            </select>
+            
+            <button onclick="calculateProbabilities()">Рассчитать вероятности</button>
+            <button onclick="showHistoricalData()">Анализ динамики</button>
+        </div>
+        
+        <div class="loading" id="loadingIndicator">
+            Загрузка...
+        </div>
+        
+        <div class="results">
+            <h2>Конкурсные списки</h2>
+            <table id="applicantsTable">
+                <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>ФИО</th>
+                        <th>Программа</th>
+                        <th>Балл</th>
+                        <th>Приоритет</th>
+                        <th>Статус</th>
+                        <th>Вероятность</th>
+                    </tr>
+                </thead>
+                <tbody id="applicantsTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let applicants = [];
+        let programs = [];
+        
+        // Load programs on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadPrograms();
+        });
+        
+        // Load available programs
+        async function loadPrograms() {
+            try {
+                showLoading(true);
+                const response = await fetch('/api/programs');
+                programs = await response.json();
+                
+                const select = document.getElementById('programSelect');
+                select.innerHTML = '<option value="">Выберите программу</option>';
+                
+                programs.forEach(program => {
+                    const option = document.createElement('option');
+                    option.value = program.name;
+                    option.textContent = `${program.name} (${program.budget_places} мест)`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error loading programs:', error);
+                alert('Ошибка загрузки программ');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Load applicants for selected program
+        async function loadApplicants() {
+            const program = document.getElementById('programSelect').value;
+            if (!program) {
+                document.getElementById('applicantsTableBody').innerHTML = '';
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                const response = await fetch(`/api/applicants/${encodeURIComponent(program)}`);
+                applicants = await response.json();
+                
+                renderApplicantsTable(applicants);
+            } catch (error) {
+                console.error('Error loading applicants:', error);
+                alert('Ошибка загрузки данных абитуриентов');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Render applicants table
+        function renderApplicantsTable(data) {
+            const tbody = document.getElementById('applicantsTableBody');
+            tbody.innerHTML = '';
+            
+            data.forEach((applicant, index) => {
+                const row = document.createElement('tr');
+                
+                // Add status class based on status
+                let statusClass = '';
+                if (applicant.status === 'Поступил') {
+                    statusClass = 'status-admitted';
+                } else if (applicant.status === 'На грани') {
+                    statusClass = 'status-borderline';
+                } else if (applicant.status === 'Не поступил') {
+                    statusClass = 'status-not-admitted';
+                }
+                
+                row.className = statusClass;
+                
+                row.innerHTML = `
+                    <td>${applicant.rank || (index + 1)}</td>
+                    <td>${applicant.name}</td>
+                    <td>${applicant.program}</td>
+                    <td>${applicant.total_score}</td>
+                    <td>${applicant.priority}</td>
+                    <td>${applicant.status || 'Не определено'}</td>
+                    <td>
+                        <div class="probability-bar">
+                            <div class="probability-fill" style="width: ${applicant.probability || 0}%"></div>
+                            <div class="probability-text">${applicant.probability || 0}%</div>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+        
+        // Upload file function
+        async function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Пожалуйста, выберите файл');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                const formData = new FormData();
+                formData.append('file', file);
+                
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                alert(result.message);
+                
+                // Refresh the applicants list after upload
+                loadApplicants();
+            } catch (error) {
+                console.error('Error uploading file:', error);
+                alert('Ошибка загрузки файла');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Batch upload multiple files
+        async function batchUploadFiles() {
+            const fileInput = document.getElementById('batchFileInput');
+            const files = Array.from(fileInput.files);
+            
+            if (files.length === 0) {
+                alert('Пожалуйста, выберите файлы для загрузки');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                // Process each file
+                for (const file of files) {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    
+                    const response = await fetch('/api/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    const result = await response.json();
+                    console.log(`Uploaded ${file.name}:`, result.message);
+                }
+                
+                alert(`Успешно загружено ${files.length} файлов`);
+                
+                // Refresh the programs and applicants list after upload
+                await loadPrograms();
+                loadApplicants();
+            } catch (error) {
+                console.error('Error during batch upload:', error);
+                alert('Ошибка пакетной загрузки файлов');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Load sample data
+        async function loadSampleData() {
+            try {
+                showLoading(true);
+                
+                // Generate sample data for each program
+                const sampleApplicants = [];
+                
+                programs.forEach(program => {
+                    for (let i = 0; i < 100; i++) {
+                        sampleApplicants.push({
+                            name: `Абитуриент ${program.name} ${i+1}`,
+                            program: program.name,
+                            total_score: Math.floor(Math.random() * 301) + 100, // Random score between 100-400
+                            priority: Math.floor(Math.random() * 5) + 1, // Random priority 1-5
+                            date_submitted: new Date().toISOString().split('T')[0]
+                        });
+                    }
+                });
+                
+                // Update database with sample data
+                const response = await fetch('/api/update-applicants', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ applicants: sampleApplicants })
+                });
+                
+                const result = await response.json();
+                alert(`Сгенерировано ${sampleApplicants.length} записей`);
+                
+                // Reload programs and applicants
+                await loadPrograms();
+            } catch (error) {
+                console.error('Error loading sample data:', error);
+                alert('Ошибка загрузки тестовых данных');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Update database
+        async function updateDatabase() {
+            try {
+                showLoading(true);
+                
+                // Simulate updating with current applicants data
+                const response = await fetch('/api/update-applicants', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ applicants: applicants })
+                });
+                
+                const result = await response.json();
+                alert(result.message);
+            } catch (error) {
+                console.error('Error updating database:', error);
+                alert('Ошибка обновления базы данных');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Cleanup database
+        async function cleanupDatabase() {
+            try {
+                showLoading(true);
+                
+                const response = await fetch('/api/cleanup-applicants', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ currentApplicants: applicants })
+                });
+                
+                const result = await response.json();
+                alert(result.message);
+                
+                // Reload data after cleanup
+                loadApplicants();
+            } catch (error) {
+                console.error('Error cleaning up database:', error);
+                alert('Ошибка очистки базы данных');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Calculate admission probabilities
+        async function calculateProbabilities() {
+            const program = document.getElementById('programSelect').value;
+            if (!program) {
+                alert('Пожалуйста, выберите программу');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                const response = await fetch(`/api/admission-probabilities/${encodeURIComponent(program)}`);
+                const data = await response.json();
+                
+                applicants = data;
+                renderApplicantsTable(data);
+            } catch (error) {
+                console.error('Error calculating probabilities:', error);
+                alert('Ошибка расчета вероятностей поступления');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Show historical data for a program
+        async function showHistoricalData() {
+            const program = document.getElementById('programSelect').value;
+            if (!program) {
+                alert('Пожалуйста, выберите программу');
+                return;
+            }
+            
+            try {
+                showLoading(true);
+                
+                const response = await fetch(`/api/historical-data/${encodeURIComponent(program)}`);
+                const historicalData = await response.json();
+                
+                // Create a modal or expandable section to show historical data
+                let htmlContent = `
+                    <div id="historicalModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;">
+                        <div style="background: white; padding: 20px; border-radius: 8px; max-width: 90%; max-height: 90%; overflow: auto; position: relative; width: 90%;">
+                            <h3>Динамика конкурса для ${program}</h3>
+                            <button onclick="closeHistoricalModal()" style="position: absolute; top: 10px; right: 10px;">X</button>
+                            
+                            <div id="historicalContent">
+                                <canvas id="trendChart" width="400" height="200"></canvas>
+                                
+                                <div style="margin-top: 20px;">
+                `;
+                
+                historicalData.forEach(dateData => {
+                    htmlContent += `
+                        <div style="margin-bottom: 20px;">
+                            <h4>Дата: ${dateData.date}</h4>
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead>
+                                    <tr style="background-color: #f8f9fa;">
+                                        <th>ФИО</th>
+                                        <th>Балл</th>
+                                        <th>Приоритет</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    dateData.applicants.slice(0, 10).forEach(applicant => { // Show top 10 for each date
+                        htmlContent += `
+                            <tr>
+                                <td>${applicant.name}</td>
+                                <td>${applicant.total_score}</td>
+                                <td>${applicant.priority}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    htmlContent += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                });
+                
+                htmlContent += `
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Remove any existing modal
+                const existingModal = document.getElementById('historicalModal');
+                if (existingModal) {
+                    existingModal.remove();
+                }
+                
+                // Add the new modal
+                document.body.insertAdjacentHTML('beforeend', htmlContent);
+                
+                // Create chart after modal is added to DOM
+                setTimeout(() => {
+                    createTrendChart(historicalData, program);
+                }, 100);
+                
+            } catch (error) {
+                console.error('Error fetching historical data:', error);
+                alert('Ошибка загрузки исторических данных');
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        // Create trend chart
+        function createTrendChart(historicalData, program) {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            // Prepare data for chart
+            const labels = historicalData.map(item => item.date);
+            const passingScores = historicalData.map(item => {
+                // Get the score of the last person who would be admitted (at budget place)
+                const programInfo = programs.find(p => p.name === program);
+                const budgetPlaces = programInfo ? programInfo.budget_places : 10;
+                
+                if (item.applicants && item.applicants.length >= budgetPlaces) {
+                    return item.applicants[budgetPlaces - 1].total_score;
+                } else if (item.applicants.length > 0) {
+                    return item.applicants[item.applicants.length - 1].total_score;
+                }
+                return 0;
+            });
+            
+            // Create the chart
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Проходной балл',
+                        data: passingScores,
+                        borderColor: 'rgb(75, 192, 192)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        tension: 0.1,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Close historical data modal
+        function closeHistoricalModal() {
+            const modal = document.getElementById('historicalModal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+        
+        // Show/hide loading indicator
+        function showLoading(show) {
+            const indicator = document.getElementById('loadingIndicator');
+            indicator.style.display = show ? 'block' : 'none';
+        }
+    </script>
+</body>
+</html>

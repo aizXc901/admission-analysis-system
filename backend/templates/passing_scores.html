@@ -1,0 +1,203 @@
+{% extends 'base.html' %}
+
+{% block title %}Проходные баллы - Система анализа поступления{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="h2">Проходные баллы на {{ date }}</h1>
+            <p>Результаты расчета проходных баллов по образовательным программам</p>
+        </div>
+    </div>
+
+    <!-- Проходные баллы -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Проходные баллы по программам</h3>
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">ПМ (Прикладная математика)</h5>
+                            <p class="card-text display-4">{{ passing_scores.PM }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">ИВТ (Информатика и ВТ)</h5>
+                            <p class="card-text display-4">{{ passing_scores.IVT }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">ИТСС (Инфокоммуникации)</h5>
+                            <p class="card-text display-4">{{ passing_scores.ITSS }}</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">ИБ (Информационная безопасность)</h5>
+                            <p class="card-text display-4">{{ passing_scores.IB }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Списки зачисленных -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Списки зачисленных абитуриентов</h3>
+        </div>
+    </div>
+
+    {% for program_code, admitted in admitted_lists.items %}
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>
+                        {% if program_code == 'PM' %}Прикладная математика (ПМ)
+                        {% elif program_code == 'IVT' %}Информатика и вычислительная техника (ИВТ)
+                        {% elif program_code == 'ITSS' %}Инфокоммуникационные технологии и системы связи (ИТСС)
+                        {% elif program_code == 'IB' %}Информационная безопасность (ИБ)
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if admitted %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>ID абитуриента</th>
+                                    <th>Сумма баллов</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for applicant in admitted %}
+                                <tr>
+                                    <td>{{ applicant.id }}</td>
+                                    <td>{{ applicant.total_score }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p>Нет зачисленных абитуриентов</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    <!-- Статистика по программам -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <h3>Статистика по образовательным программам</h3>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Показатель</th>
+                            <th>ПМ</th>
+                            <th>ИВТ</th>
+                            <th>ИТСС</th>
+                            <th>ИБ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Общее кол-во заявлений</td>
+                            <td>{{ stats.PM.total_applications }}</td>
+                            <td>{{ stats.IVT.total_applications }}</td>
+                            <td>{{ stats.ITSS.total_applications }}</td>
+                            <td>{{ stats.IB.total_applications }}</td>
+                        </tr>
+                        <tr>
+                            <td>Количество мест на ОП</td>
+                            <td>{{ stats.PM.seats }}</td>
+                            <td>{{ stats.IVT.seats }}</td>
+                            <td>{{ stats.ITSS.seats }}</td>
+                            <td>{{ stats.IB.seats }}</td>
+                        </tr>
+                        <tr>
+                            <td>Кол-во заявлений 1-го приоритета</td>
+                            <td>{{ stats.PM.first_priority }}</td>
+                            <td>{{ stats.IVT.first_priority }}</td>
+                            <td>{{ stats.ITSS.first_priority }}</td>
+                            <td>{{ stats.IB.first_priority }}</td>
+                        </tr>
+                        <tr>
+                            <td>Кол-во заявлений 2-го приоритета</td>
+                            <td>{{ stats.PM.second_priority }}</td>
+                            <td>{{ stats.IVT.second_priority }}</td>
+                            <td>{{ stats.ITSS.second_priority }}</td>
+                            <td>{{ stats.IB.second_priority }}</td>
+                        </tr>
+                        <tr>
+                            <td>Кол-во заявлений 3-го приоритета</td>
+                            <td>{{ stats.PM.third_priority }}</td>
+                            <td>{{ stats.IVT.third_priority }}</td>
+                            <td>{{ stats.ITSS.third_priority }}</td>
+                            <td>{{ stats.IB.third_priority }}</td>
+                        </tr>
+                        <tr>
+                            <td>Кол-во заявлений 4-го приоритета</td>
+                            <td>{{ stats.PM.fourth_priority }}</td>
+                            <td>{{ stats.IVT.fourth_priority }}</td>
+                            <td>{{ stats.ITSS.fourth_priority }}</td>
+                            <td>{{ stats.IB.fourth_priority }}</td>
+                        </tr>
+                        <tr>
+                            <td>Кол-во зачисленных 1-го приоритета</td>
+                            <td>{{ stats.PM.admitted_first_priority }}</td>
+                            <td>{{ stats.IVT.admitted_first_priority }}</td>
+                            <td>{{ stats.ITSS.admitted_first_priority }}</td>
+                            <td>{{ stats.IB.admitted_first_priority }}</td>
+                        </tr>
+                        <tr>
+                            <td>Кол-во зачисленных 2-го приоритета</td>
+                            <td>{{ stats.PM.admitted_second_priority }}</td>
+                            <td>{{ stats.IVT.admitted_second_priority }}</td>
+                            <td>{{ stats.ITSS.admitted_second_priority }}</td>
+                            <td>{{ stats.IB.admitted_second_priority }}</td>
+                        </tr>
+                        <tr>
+                            <td>Кол-во зачисленных 3-го приоритета</td>
+                            <td>{{ stats.PM.admitted_third_priority }}</td>
+                            <td>{{ stats.IVT.admitted_third_priority }}</td>
+                            <td>{{ stats.ITSS.admitted_third_priority }}</td>
+                            <td>{{ stats.IB.admitted_third_priority }}</td>
+                        </tr>
+                        <tr>
+                            <td>Кол-во зачисленных 4-го приоритета</td>
+                            <td>{{ stats.PM.admitted_fourth_priority }}</td>
+                            <td>{{ stats.IVT.admitted_fourth_priority }}</td>
+                            <td>{{ stats.ITSS.admitted_fourth_priority }}</td>
+                            <td>{{ stats.IB.admitted_fourth_priority }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Кнопка для генерации PDF-отчета -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <a href="/generate-pdf-report/?date={{ date }}" class="btn btn-primary">Сформировать PDF-отчет</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
