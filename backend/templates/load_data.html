@@ -75,16 +75,14 @@
     <div class="container">
         <h1>📁 Загрузка конкурсных списков</h1>
 
-        <form method="post" enctype="multipart/form-data" id="uploadForm">
-            {% csrf_token %}
-
-            <div class="form-group">
-                <label for="file">Выберите файл с данными:</label>
-                <input type="file" name="file" id="file" accept=".xlsx,.xls,.csv" required>
-            </div>
-
-            <button type="submit">📤 Загрузить данные</button>
-        </form>
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="form-group">
+            <label for="file">Выберите файл с конкурсными списками:</label>
+            <input type="file" name="file" id="file" class="form-control" accept=".xlsx,.xls,.csv">
+        </div>
+        <button type="submit" class="btn btn-primary">Загрузить данные</button>
+    </form>
 
         <div id="result"></div>
 

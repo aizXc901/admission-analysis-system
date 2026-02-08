@@ -47,8 +47,9 @@ def load_data(request):
                     }
                 )
 
-                # Получаем программу
-                program = EducationalProgram.objects.get(code=row['ОП'])
+                # Получаем программу из столбца 'ОП'
+                program_code = row['ОП']
+                program = EducationalProgram.objects.get(code=program_code)
 
                 # Создаем или обновляем запись в AdmissionData
                 admission_data, created = AdmissionData.objects.get_or_create(
