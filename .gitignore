@@ -1,14 +1,46 @@
 ```
-# Database
-db.sqlite3
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# Static files
-staticfiles/
+# Environment
+.env
+.env.local
+.env.*
+.venv/
+venv/
+ENV/
 
-# Cookies
-cookies.txt
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
 
-# Compressed data files
-*.csv.gz
-*.tar.gz
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
 ```
