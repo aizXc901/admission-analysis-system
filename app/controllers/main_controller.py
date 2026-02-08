@@ -21,11 +21,7 @@ def index():
     # Get all educational programs
     programs = EducationalProgram.query.all()
     
-    # Get latest admission data
-    today = date.today()
-    latest_data = AdmissionData.query.filter_by(date=today).all()
-    
-    return render_template('index.html', programs=programs, data=latest_data)
+    return render_template('index.html', programs=programs)
 
 
 @bp.route('/upload', methods=['POST'])
